@@ -1,0 +1,34 @@
+project:
+    name: postgresql-adventureworks
+    repo: joshluedeman/postgresql-adventureworks
+roles:
+    core:
+        - planner
+        - architect
+        - coder
+        - tester
+        - reviewer
+        - security-auditor
+        - documenter
+        - orchestrator
+    optional:
+        - triager
+        - devops
+        - dependency-manager
+        - refactorer
+workflows:
+    skip_steps:
+        documentation:
+            - security-auditor
+        spike:
+            - tester
+            - security-auditor
+    extra_gates: {}
+quality_gates:
+    handoff_complete: true
+    tests_pass: true
+    lint_pass: true
+memory:
+    archive_threshold: 50
+    sync_to_memory_md: true
+mcp_servers: {}
