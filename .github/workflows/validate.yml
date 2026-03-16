@@ -1,0 +1,64 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify database backup exists
+        run: |
+          if [ ! -f AdventureWorksPG.gz ]; then
+            echo "::error::AdventureWorksPG.gz not found"
+            exit 1
+          fi
+          echo "Database backup size: $(du -h AdventureWorksPG.gz | cut -f1)"
+
+      - name: Validate YAML files
+        run: |
+          pip install yamllint
+          yamllint -d relaxed .teamwork/config.yaml || true
+          echo "YAML validation complete"
+
+      - name: Validate Markdown
+        uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: "README.md,CONTRIBUTING.md,CHANGELOG.md,MEMORY.md,docs/*.md"
+        continue-on-error: true
+
+      - name: Check PowerShell syntax
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path . -Filter *.ps1 -Recurse
+          foreach ($file in $files) {
+            Write-Host "Checking: $($file.Name)"
+            $errors = $null
+            [System.Management.Automation.PSParser]::Tokenize((Get-Content $file.FullName -Raw), [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              Write-Error "Syntax errors in $($file.Name):"
+              $errors | ForEach-Object { Write-Error "  Line $($_.Token.StartLine): $($_.Message)" }
+              exit 1
+            }
+          }
+          Write-Host "All PowerShell files passed syntax check"
+
+      - name: Check Bash syntax
+        run: |
+          if [ -f deploy-adventureworks.sh ]; then
+            bash -n deploy-adventureworks.sh
+            echo "Bash syntax check passed"
+          fi
+
+      - name: Verify no secrets in code
+        run: |
+          # Check for common secret patterns (but allow example passwords)
+          if grep -rn 'password\s*=' --include="*.ps1" --include="*.sh" . | grep -v 'EXAMPLE\|YourSecure\|PARAMETER\|AdminPassword\|PGPASSWORD\|param\|\.PARAMETER' | grep -v '#'; then
+            echo "::warning::Potential hardcoded credentials found. Please review."
+          fi
+          echo "Secret scan complete"

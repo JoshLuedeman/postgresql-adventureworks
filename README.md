@@ -1,49 +1,255 @@
-# AdventureWorks database for Azure Database for PostgreSQL Flexible Server
-This project restores the SQL Server AdventureWorks 2016 database backup converted to PostgreSQL schema to an Azure Database for PostgreSQL Flexible Server instance.  
-## 1.  Provision an Azure Database for PostgreSQL Flexible Server instance
-1.  Open the script CreatePostgreSQLFlexibleServer.ps1 in Visual Studio Code or PowerShell ISE.  
-2.  Alter the parameters for the function to match what you want the servername, resource group, region and server parameters to be.  
-![Server Parameters.](media/1a-RunFunction.JPG 'Server Parameters')  
-3.  The script call will output a Server object which we can use to get the Fully Qualified Name of the server.  We will use this server name to connect to the PostgreSQL database via psql.  
-The output will look similar to this:  
-![Fully Qualified Server Name.](media/1b-ServerName.JPG 'Server Name')
+# AdventureWorks for Azure Database for PostgreSQL
 
-**I highly recommend to create the server using the postgres user as the admin user account.  The AdventureWorks backup was created with the postgres user owning all objects and will error if the restore occurs under a different account.** 
+Deploy the Microsoft AdventureWorks 2016 sample database to Azure Database for PostgreSQL Flexible Server.
 
-## 2.  Enable the necessary PostgreSQL extensions
-1.  Navigate to the 'Server Parameters' section for the Azure Database for PostgreSQL Flexible Server.
-2.  Find the azure.extensions option from the Server parameters list and enable the 'TABLEFUNC' and 'UUID-OSSP' extensions.  The AdventureWorks database uses these features and the database restore will error if these extensions are not enabled.  
-3.  Click the Save option to enable these extensions on the server. 
-![Create Extensions.](media/1c-Extensions.jpg 'PostgreSQL Extensions')
+## What You Get
 
-## 3.  Create the AdventureWorks database on the Azure Database for PostgreSQL Flexible Server
-1.  Download and install PGAdmin:  https://www.pgadmin.org/download/
-2.  Navigate to where PGAdmin is installed (the location of D:\Program Files\pgAdmin 4\v5\runtime on this test machine) and open a Command Prompt.
-3.  Execute the following command to connect to the PostgreSQL Flexible Server.  Be sure to use the Fully Qualified Name of your server and to enter your Password when prompted.  
+AdventureWorks is a realistic, multi-table business database originally created by Microsoft for SQL Server and converted here to PostgreSQL format. It contains five schemas modelling a fictitious bicycle manufacturer:
+
+```mermaid
+graph LR
+    A[Azure Subscription] --> B[Resource Group]
+    B --> C[PostgreSQL Flexible Server]
+    C --> D[(adventureworks)]
+    D --> E[humanresources]
+    D --> F[person]
+    D --> G[production]
+    D --> H[purchasing]
+    D --> I[sales]
 ```
-   psql.exe "host=timchapflexpgtest6.postgres.database.azure.com port=5432 dbname=postgres user=postgres"
-   ```
-The output will look similar to the following:  
-![Server Login.](media/2a-PSQLLogin.JPG 'PSQL Login')
-4.  Create the AdventureWorks database by using the following SQL statement:  
+
+- **HumanResources** — Employees, departments, job history
+- **Person** — Contacts, addresses, contact types
+- **Production** — Products, categories, inventory
+- **Purchasing** — Vendors, purchase orders
+- **Sales** — Orders, customers, territories
+
+## Prerequisites
+
+- **Azure subscription** with permissions to create resources
+- One of the following to provision the server:
+  - **PowerShell 5.1+ or 7+** with the Az.PostgreSql module (`Install-Module Az.PostgreSql`)
+  - **Azure CLI** (`az`) for Mac/Linux users
+- **psql** (PostgreSQL command-line client) — included with [pgAdmin 4](https://www.pgadmin.org/download/) or any PostgreSQL installation
+- **pg_restore** — included with the same PostgreSQL installation as psql
+
+> **⚠️ Azure Cost Warning:** Running an Azure Database for PostgreSQL Flexible Server incurs charges. A Burstable B1ms instance costs approximately $12–15/month. Remember to delete the resource group when finished to avoid ongoing charges.
+
+## Quick Start (Experienced Users)
+
+For users familiar with Azure and PostgreSQL — deploy in ~10 minutes:
+
+**Option A: All-in-one script (recommended)**
+
+```powershell
+git clone https://github.com/JoshLuedeman/postgresql-adventureworks.git
+cd postgresql-adventureworks
+
+# PowerShell — single command handles everything
+./Deploy-AdventureWorks.ps1 -ServerName "myawserver" -AdminPassword "YourSecureP@ssw0rd!"
 ```
+
+```bash
+# Or Bash/Mac/Linux — same thing with Azure CLI
+./deploy-adventureworks.sh --server-name myawserver --admin-password 'YourSecureP@ssw0rd!'
+```
+
+**Option B: Manual step-by-step**
+
+```powershell
+# 1. Clone the repository
+git clone https://github.com/JoshLuedeman/postgresql-adventureworks.git
+cd postgresql-adventureworks
+
+# 2. Provision the server (PowerShell)
+. ./CreatePostgreSQLFlexibleServer.ps1
+
+$server = create-AzPGFlexibleServer `
+    -RGName "adventureworks-rg" `
+    -Location "eastus" `
+    -PGServerName "myawserver" `
+    -PGAdminUserName "postgres" `
+    -PGAdminPassword "YourSecureP@ssw0rd!" `
+    -PGSkuTier "Burstable" `
+    -PGSku "Standard_B1ms" `
+    -PGVersion 16 `
+    -PGStorageInMb 32768
+
+# 3. Enable extensions in Azure Portal (see Step 2 below)
+
+# 4. Create the database and restore
+psql "host=$($server.FullyQualifiedDomainName) port=5432 dbname=postgres user=postgres" -c "CREATE DATABASE adventureworks;"
+pg_restore -h $server.FullyQualifiedDomainName -U postgres -d adventureworks AdventureWorksPG.gz
+```
+
+Or with **Azure CLI** (Mac/Linux):
+
+```bash
+# Create the server
+az postgres flexible-server create \
+    --resource-group adventureworks-rg \
+    --name myawserver \
+    --admin-user postgres \
+    --admin-password 'YourSecureP@ssw0rd!' \
+    --location eastus \
+    --sku-name Standard_B1ms \
+    --tier Burstable \
+    --version 16 \
+    --storage-size 32 \
+    --public-access 0.0.0.0
+
+# Enable extensions, create the database, and restore
+# (see Step 2 and Step 3 below)
+```
+
+## Step-by-Step Guide
+
+### Step 1: Provision an Azure PostgreSQL Flexible Server
+
+**Option A: PowerShell (recommended)**
+
+```powershell
+# Load the function
+. ./CreatePostgreSQLFlexibleServer.ps1
+
+# Set your parameters
+$params = @{
+    RGName          = "adventureworks-rg"
+    Location        = "eastus"
+    PGServerName    = "myawserver"
+    PGAdminUserName = "postgres"    # ⚠️ MUST use "postgres" — see note below
+    PGAdminPassword = "YourSecureP@ssw0rd!"
+    PGSkuTier       = "Burstable"
+    PGSku           = "Standard_B1ms"
+    PGVersion       = 16
+    PGStorageInMb   = 32768
+}
+
+$server = create-AzPGFlexibleServer @params
+$serverFQDN = $server.FullyQualifiedDomainName
+```
+
+The script will create the resource group (if it doesn't exist), provision the server, and add a firewall rule for your current IP address.
+
+![Server Parameters](media/1a-RunFunction.JPG)
+![Fully Qualified Server Name](media/1b-ServerName.JPG)
+
+**Option B: Azure Portal or Azure CLI**
+
+Create the server through the [Azure Portal](https://portal.azure.com) or using `az postgres flexible-server create`. Ensure you note the fully qualified domain name (e.g., `myawserver.postgres.database.azure.com`).
+
+> **⚠️ Important:** Use `postgres` as the admin username. The AdventureWorks backup was created with `postgres` owning all objects. Using a different username will cause permission errors during restore.
+
+### Step 2: Enable PostgreSQL Extensions
+
+1. Open the [Azure Portal](https://portal.azure.com)
+2. Navigate to your PostgreSQL Flexible Server → **Server parameters**
+3. Search for `azure.extensions`
+4. Enable: **TABLEFUNC** and **UUID-OSSP**
+5. Click **Save** (the server will restart)
+
+![Enable Extensions](media/1c-Extensions.jpg)
+
+### Step 3: Create the Database and Restore
+
+```bash
+# Connect to the server
+psql "host=YOUR_SERVER.postgres.database.azure.com port=5432 dbname=postgres user=postgres"
+
+# Create the database
 CREATE DATABASE adventureworks;
-```
-Which will have output similar to the following:
-![Create Database.](media/2b-CreateDatabase.JPG 'Create Database')
+\q
 
-## 4.  Restore the AdventureWorks database on the Azure Database for PostgreSQL Flexible Server
-1.  Execute the pg_restore below.  Be sure to use the Fully Qualified Name of your server and the location of where you've cloned this repo.
+# Restore the backup (from your local machine)
+pg_restore -h YOUR_SERVER.postgres.database.azure.com -U postgres -d adventureworks AdventureWorksPG.gz
 ```
-pg_restore -h timchapflexpgtest6.postgres.database.azure.com -U postgres  -d adventureworks D:/GitHub/postgresql-adventureworks/AdventureWorksPG.gz 
-```
-The output should look similar to the following.  **Note:  This script returns 2 Azure extension related errors.  These can be safely ignored.**
-![Restore Database.](media/3a-RestoreDatabase.JPG 'Restore Database')
 
-## 5.  Log into the AdventureWorks database via pgAdmin
-1.  Open pgAdmin.  You may need to set up a password if this is your first time using it.
-2.  Under Browser, right click and choose Create-->Server Group. Give the Server Group a name and then Choose Save. Mine is named Flexible.
-3.  Enter the name of the Azure Database for PostgreSQL Flexible Server along with the username you chose when you created the Server.  The output will look similar to the following:  
-![Register Server](media/4a-RegisterServer.JPG 'Register Server')  
-4.  Expand the database in the Browser to view the AdventureWorks tables.   
-![Expand AW](media/4b-AWExpanded.JPG  'Expand AW')
+![Server Login](media/2a-PSQLLogin.JPG)
+![Create Database](media/2b-CreateDatabase.JPG)
+![Restore Database](media/3a-RestoreDatabase.JPG)
+
+> **Note:** The restore will output 2 Azure extension-related errors. These are safe to ignore — they don't affect data or schema integrity.
+
+### Step 4: Verify the Restore
+
+```bash
+psql "host=YOUR_SERVER.postgres.database.azure.com port=5432 dbname=adventureworks user=postgres"
+
+# Check that tables exist
+SELECT schemaname, COUNT(*) as table_count
+FROM pg_tables
+WHERE schemaname IN ('humanresources','person','production','purchasing','sales')
+GROUP BY schemaname
+ORDER BY schemaname;
+
+# Verify data was loaded
+SELECT COUNT(*) FROM sales.salesorderheader;  -- Should return 31,465 rows
+```
+
+### Step 5: Connect with pgAdmin (Optional)
+
+1. Open pgAdmin 4
+2. Right-click **Servers** → **Register** → **Server**
+3. Enter your server's FQDN, username (`postgres`), and password
+4. Expand the database to explore the AdventureWorks tables
+
+![Register Server](media/4a-RegisterServer.JPG)
+![Explore Tables](media/4b-AWExpanded.JPG)
+
+## Verification with Make
+
+The included Makefile provides helper targets:
+
+```bash
+make restore     # Show the pg_restore command
+make verify      # Show verification queries
+make provision   # Show the provisioning command
+make check       # Run pre-commit hooks (if installed)
+make clean       # Remove temporary files
+make help        # List all available targets
+```
+
+Override connection defaults with environment variables:
+
+```bash
+make restore PGHOST=myawserver.postgres.database.azure.com PGUSER=postgres
+```
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `pg_restore: command not found` | Add PostgreSQL bin directory to your PATH. On Windows: `C:\Program Files\PostgreSQL\16\bin` |
+| `could not connect to server` | Check your firewall rules in Azure Portal. Ensure your IP is allowed. |
+| `extension "tablefunc" is not available` | Enable TABLEFUNC in Azure Portal → Server parameters → azure.extensions |
+| `role "postgres" does not exist` | You must use `postgres` as the admin username when creating the server |
+| `permission denied for schema` | The restore must run as the `postgres` user |
+| Azure extension errors during restore | Safe to ignore — Azure doesn't support all extensions |
+| `password authentication failed` | Verify your password meets Azure complexity requirements (8+ chars, mixed case, numbers, special) |
+
+## Cleanup
+
+To avoid ongoing Azure charges, delete the resource group when finished:
+
+```powershell
+Remove-AzResourceGroup -Name "adventureworks-rg" -Force
+```
+
+Or with Azure CLI:
+
+```bash
+az group delete --name adventureworks-rg --yes --no-wait
+```
+
+## About This Repository
+
+This repository serves as both a database deployment tool and a demonstration of the [Teamwork](https://github.com/JoshLuedeman/teamwork) agent-native development framework. The framework files (`.github/agents/`, `.github/skills/`, `.teamwork/`, `docs/`) provide structured AI-human collaboration through defined roles and workflows.
+
+- **Database users:** You only need the README, the PowerShell script, and `AdventureWorksPG.gz`.
+- **Framework users:** See [MEMORY.md](MEMORY.md) for full project context and framework documentation.
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
+The AdventureWorks sample data is provided by Microsoft under public domain terms.

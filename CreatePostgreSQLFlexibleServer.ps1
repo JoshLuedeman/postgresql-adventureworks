@@ -19,13 +19,13 @@ Written by:  Tim Chapman, Microsoft  09/2021
 
 .EXAMPLE
     $PGParams = @{}
-    $PGParams.RGName = "timchappgtestrg"
+    $PGParams.RGName = "adventureworks-rg"
     $PGParams.Location = "eastus"
-    $PGParams.PGServerName = "timchapflexpgtest"
-    $PGParams.PGAdminUserName = "timchapman"
-    $PGParams.PGAdminPassword = "Password12345!!" 
-    $PGParams.PGSkuTier = "GeneralPurpose"
-    $PGParams.PGSku= "Standard_D2s_v3"
+    $PGParams.PGServerName = "myawserver"
+    $PGParams.PGAdminUserName = "postgres"
+    $PGParams.PGAdminPassword = "YourSecureP@ssw0rd!"
+    $PGParams.PGSkuTier = "Burstable"
+    $PGParams.PGSku = "Standard_B1ms"
 
     $PGFlexServer = create-AzPGFlexibleServer @PGParams
 
@@ -87,7 +87,11 @@ param(
     #servername must be lowercase or the deployment will fail.
     $PGServerName = $PGServerName.ToLower()
 
-    $SkuMatch = $false
+    if ($PGAdminUserName -ne "postgres") {
+        Write-Warning "Admin username is '$PGAdminUserName'. The AdventureWorks backup requires 'postgres' as the owner. Restore may fail with permission errors."
+    }
+
+    $SkuMatch= $false
 
     if ($PGSkuTier -eq "Burstable" -and $PGSku -like "Standard_B*") 
     {
@@ -107,6 +111,7 @@ param(
         return
     }
 
+    Write-Verbose "Checking resource group '$RGName'..."
     if(-not(Get-AzResourceGroup -Name $RGName -Location $Location -ErrorAction Ignore))
     {
         $RG = New-AzResourceGroup -Name $RGName -Location $Location
@@ -124,9 +129,27 @@ param(
     $PostgreSQLParams.Version = $PGVersion 
     $PostgreSQLParams.StorageInMb = $PGStorageInMb
     $PostgreSQLParams.PublicAccess = "None"
-    $PGServerObject = New-AzPostgreSqlFlexibleServer @PostgreSQLParams
 
-    $MyIPAddress = Invoke-RestMethod http://ipinfo.io/json | select -exp ip
+    Write-Verbose "Creating PostgreSQL Flexible Server '$PGServerName' in '$Location'..."
+    try {
+        $PGServerObject = New-AzPostgreSqlFlexibleServer @PostgreSQLParams
+        Write-Verbose "Server '$PGServerName' created successfully."
+    }
+    catch {
+        Write-Error "Failed to create PostgreSQL Flexible Server: $_"
+        return $null
+    }
+
+    try {
+        $MyIPAddress = (Invoke-RestMethod -Uri https://ipinfo.io/json -TimeoutSec 10).ip
+    }
+    catch {
+        Write-Warning "Could not auto-detect public IP address. Please configure firewall rules manually in the Azure Portal."
+        Write-Warning "Error: $_"
+        return $PGServerObject
+    }
+
+    Write-Verbose "Creating firewall rule for IP: $MyIPAddress..."
     $FirewallRuleName = "pgallowedips-$PGServerName"
     $FirewallRules = @{}
     $FirewallRules.ResourceGroupName = $RGName 

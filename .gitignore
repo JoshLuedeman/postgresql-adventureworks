@@ -1,1 +1,25 @@
+# Backup copy of database dump
 _AdventureWorksPG.gz
+
+# Environment and credentials
+.env
+.env.local
+*.env
+
+# Logs
+*.log
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor/IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# Teamwork metrics (runtime data)
+.teamwork/metrics/

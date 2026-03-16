@@ -338,13 +338,15 @@ Review these before making architectural changes to understand prior constraints
 - **Repository Owner**: joshluedeman/postgresql-adventureworks
 - **Teamwork Framework Status**: Customized for database project (v1.3.1). Removed irrelevant agents (api-agent, dependency-manager). All remaining agents specialized for PostgreSQL/Azure domain.
 - **Database Status**: AdventureWorks 2016 PostgreSQL dump ready for restore (AdventureWorksPG.gz)
-- **Documentation**: Comprehensive; includes conventions, ADRs, glossary, role-selector
+- **Deployment Scripts**: `Deploy-AdventureWorks.ps1` (PowerShell) and `deploy-adventureworks.sh` (Bash) — single-command deployment
+- **Documentation**: README with quickstart, prerequisites, troubleshooting. Troubleshooting guide in docs/troubleshooting.md.
 - **Media**: 8 instructional screenshots in media/ documenting the Azure setup workflow
 - **Build System**: Makefile with database-specific targets (restore, verify, provision, check, clean)
-- **CI/CD**: Not configured. Issue templates and pull request templates available.
-- **Active Agents**: 15 agents (8 core + 4 optional + 3 extended). Removed: api-agent, dependency-manager. See .github/agents/ for full list.
+- **CI/CD**: GitHub Actions workflow (`.github/workflows/validate.yml`) validates PowerShell/Bash syntax, YAML, Markdown, and secrets
+- **Active Agents**: 15 agents (8 core + 4 optional + 3 extended). See .github/agents/ for full list.
 - **Quality Gates**: `tests_pass: false`, `lint_pass: false` (manual psql validation; no automated test framework)
 - **Framework Review**: 12 upstream improvement issues filed on joshluedeman/teamwork (#126-#137)
+- **Open Source**: MIT LICENSE, CONTRIBUTING.md, CHANGELOG.md with full history
 
 ---
 
