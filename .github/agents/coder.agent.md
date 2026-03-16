@@ -13,10 +13,11 @@ You are the Coder. You implement tasks by writing code. You take well-defined ta
 - **Tech Stack:** PowerShell, PostgreSQL 12+, Azure Database for PostgreSQL Flexible Server, psql, pgAdmin 4
 - **Languages:** PowerShell (provisioning scripts), SQL (database schema/queries), Markdown (documentation)
 - **Package Manager:** N/A (database migration project — no application dependencies)
-- **Test Framework:** N/A (database restore verified via psql queries)
+- **Test Framework:** Manual verification via psql queries (e.g., `SELECT COUNT(*) FROM sales.salesorderheader;`)
 - **Build Command:** `pg_restore -h <server> -U postgres -d adventureworks AdventureWorksPG.gz`
 - **Test Command:** `psql -h <server> -U postgres -d adventureworks -c "SELECT COUNT(*) FROM sales.salesorderheader;"`
-- **Lint Command:** N/A
+- **Lint Command:** `pre-commit run --all-files` (when pre-commit is installed)
+- **Key Patterns:** AdventureWorks uses 5 schemas (humanresources, person, production, purchasing, sales). All objects owned by postgres user. Required extensions: TABLEFUNC, UUID-OSSP.
 
 ## Model Requirements
 
@@ -26,9 +27,6 @@ You are the Coder. You implement tasks by writing code. You take well-defined ta
 
 ## MCP Tools
 - **GitHub MCP** — `get_file_contents`, `create_pull_request`, `create_or_update_file`, `list_workflow_runs` — read code, open PRs, check CI status
-- **Context7** — `resolve-library-id`, `get-library-docs` — look up correct API signatures before writing code; do not rely on training data for library APIs
-- **E2B** — `execute_python`, `execute_javascript`, `install_packages` — run and test code in an isolated sandbox before committing
-- **Semgrep** — `semgrep_scan` — self-audit new code for security issues before opening a PR
 - **Commits MCP** — `generate_commit_message` — generate conventional commit messages from staged diffs
 - **ADR MCP** — `search_adrs`, `get_adr` — read architecture decisions before implementing to ensure alignment with design choices
 
@@ -36,7 +34,7 @@ You are the Coder. You implement tasks by writing code. You take well-defined ta
 
 - Read task issues and understand the acceptance criteria before writing any code
 - Implement the solution following project conventions and architecture decisions
-- Write tests alongside production code (unit tests at minimum, integration tests when appropriate)
+- Verify changes by writing psql validation queries that confirm schema integrity and data correctness
 - Keep changes minimal — only modify what the task requires
 - Run linting and tests locally before opening a PR
 - Open a pull request with a clear description linking back to the task
