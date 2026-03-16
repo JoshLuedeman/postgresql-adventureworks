@@ -1,34 +1,38 @@
 ---
 name: rollback-workflow
-description: "Workflow for reverting a bad merge that has broken tests or caused a production issue. Use when a merged change needs to be undone to restore stability."
+description: "Workflow for reverting a bad merge that has broken the schema or caused a restore failure. Use when a merged change needs to be undone to restore stability."
 ---
 
 # Rollback Workflow
 
 ## Overview
 
-Workflow for reverting a bad merge that has broken tests, caused a production issue, or been
-flagged by the Human. The goal is to restore the previous known-good state as quickly as
+Workflow for reverting a bad merge that has broken the schema, caused a restore failure, or
+been flagged by the Human. The goal is to restore the previous known-good state as quickly as
 possible, then file a follow-up issue to address the underlying problem through the standard
 Bug Fix or Hotfix workflow.
 
+For database rollbacks, options include: `git revert` of the bad commit, restoring from a
+previous tagged `AdventureWorksPG.gz` dump via `pg_restore`, or reverting schema change
+scripts. Always ensure a data backup exists before applying any revert to a live database.
+
 ## Trigger
 
-A merged change is identified as problematic — broken CI on the target branch, production
-regression, or a Human decision to undo a change. The trigger must include the specific
-commit or PR that needs to be reverted and the reason for the rollback.
+A merged change is identified as problematic — broken schema, restore failure, data integrity
+issue, or a Human decision to undo a change. The trigger must include the specific commit or
+PR that needs to be reverted and the reason for the rollback.
 
 ## Steps
 
 | # | Role | Action | Inputs | Outputs | Success Criteria |
 |---|------|--------|--------|---------|------------------|
 | 0 | **Orchestrator** | Initialize workflow: create state file, validate inputs | Trigger event, goal description | `.teamwork/state/<id>.yaml`, metrics log entry | State file created with status `active` |
-| 1 | **Human / Tester** | Identifies that a merged change is causing problems — broken tests, production issue, or incorrect behavior | CI failure, production alert, user report | Incident report identifying the bad merge (commit SHA or PR number) and symptoms | Bad merge clearly identified with evidence |
+| 1 | **Human / Tester** | Identifies that a merged change is causing problems — broken schema, restore failure, or incorrect behavior | Validation failure, restore error, user report | Incident report identifying the bad merge (commit SHA or PR number) and symptoms | Bad merge clearly identified with evidence |
 | 2 | **Human** | Decides whether to revert (rollback) or forward-fix. Choose revert when the fastest path to stability is undoing the change | Incident report, severity assessment | Decision: revert or forward-fix | Decision documented with rationale |
-| 3 | **Coder** | Creates a revert PR using `git revert` against the identified commit(s). The revert should be mechanical — no manual edits beyond resolving revert conflicts | Bad merge commit SHA, revert decision | Revert PR linked to original PR and incident | Revert PR is clean and CI passes |
-| 4 | **Tester** | Validates that the revert restores the previous known-good behavior. Runs the test suite and confirms the specific failure from step 1 is resolved | Revert PR, original incident report | Validation results confirming restoration | Original failure resolved; no new regressions |
+| 3 | **Coder** | Creates a revert PR using `git revert` against the identified commit(s). The revert should be mechanical — no manual edits beyond resolving revert conflicts | Bad merge commit SHA, revert decision | Revert PR linked to original PR and incident | Revert PR is clean and schema changes apply cleanly (no SQL errors) |
+| 4 | **Tester** | Validates that the revert restores the previous known-good behavior. Runs validation queries and confirms the specific failure from step 1 is resolved | Revert PR, original incident report | Validation results confirming restoration | Original failure resolved; no new issues introduced |
 | 5 | **Reviewer** | Fast-track review — verify the revert is correct and complete. Review bar is low: the revert should be a mechanical undo | Revert PR, test results | Review approval | Revert is accurate and safe to merge |
-| 6 | **Human** | Merges the revert PR and confirms the target branch is stable | Approved revert PR | Merged revert on target branch | CI passes on target branch; stability restored |
+| 6 | **Human** | Merges the revert PR and confirms the target branch is stable | Approved revert PR | Merged revert on target branch | Schema validated via psql; stability restored |
 | 7 | **Documenter** | Files a follow-up issue to properly address the reverted change via the Bug Fix or Hotfix workflow. Updates changelog with the revert | Merged revert, original PR, incident report | Follow-up issue, changelog entry | Follow-up issue exists; changelog updated |
 | 8 | **Orchestrator** | Complete workflow: validate all gates passed, update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
 
@@ -50,11 +54,11 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 **Coder → Tester**
 - Open revert PR created with `git revert`
 - PR description references the original PR and explains why it's being reverted
-- CI passing on the revert branch
+- Changes verified via manual review and psql validation queries
 
 **Tester → Reviewer**
 - PR comment confirming the revert resolves the original failure
-- Test results showing the previous behavior is restored
+- Validation query results showing the previous behavior is restored
 
 **Reviewer → Human**
 - GitHub PR review: approved (fast-track — block only if revert is incorrect)
@@ -66,7 +70,7 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 ## Completion Criteria
 
 - The reverted change is undone and the target branch is stable.
-- CI passes on the target branch after the revert is merged.
+- Schema integrity verified via psql after the revert is merged.
 - A follow-up issue is filed to address the original problem properly.
 - Changelog is updated to reflect the revert.
 
@@ -87,3 +91,6 @@ The orchestrator validates each handoff artifact before dispatching the next rol
   quality gate fails, the orchestrator keeps the workflow at the current step and notifies
   the responsible role. If a blocker is raised, the orchestrator sets the workflow to
   `blocked` and escalates to the human.
+- **Data backup before revert**: For database rollbacks applied to a live database, always
+  ensure a backup exists before applying the revert. Use `pg_dump` to capture the current
+  state before running `pg_restore` from a previous tagged dump.

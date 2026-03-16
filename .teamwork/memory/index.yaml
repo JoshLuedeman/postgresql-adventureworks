@@ -1,0 +1,25 @@
+domains:
+  database:
+    - pattern-001
+    - pattern-002
+    - pattern-003
+  restore:
+    - pattern-001
+    - pattern-003
+  azure:
+    - pattern-002
+  teamwork:
+    - pattern-004
+    - decision-001
+    - decision-002
+    - decision-003
+    - antipattern-001
+  agents:
+    - pattern-004
+    - decision-001
+  config:
+    - decision-002
+  workflows:
+    - decision-003
+  setup:
+    - antipattern-001

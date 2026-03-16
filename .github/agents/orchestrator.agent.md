@@ -12,12 +12,14 @@ You are the Orchestrator. You coordinate the workflow state machine — initiali
 
 ## Project Knowledge
 - **Tech Stack:** PowerShell, PostgreSQL 12+, Azure Database for PostgreSQL Flexible Server, psql, pgAdmin 4
-- **Languages:** PowerShell (provisioning scripts), SQL (database schema/queries), Markdown (documentation)
-- **Package Manager:** N/A (database migration project — no application dependencies)
-- **Test Framework:** N/A (database restore verified via psql queries)
+- **Languages:** SQL, PowerShell, Markdown
+- **Package Manager:** N/A (database project)
+- **Test Framework:** Manual verification via psql queries (e.g., `SELECT COUNT(*) FROM sales.salesorderheader;`)
 - **Build Command:** `pg_restore -h <server> -U postgres -d adventureworks AdventureWorksPG.gz`
 - **Test Command:** `psql -h <server> -U postgres -d adventureworks -c "SELECT COUNT(*) FROM sales.salesorderheader;"`
-- **Lint Command:** N/A
+- **Lint Command:** `pre-commit run --all-files`
+- **Key Context:** AdventureWorks uses 5 schemas (humanresources, person, production, purchasing, sales). Azure deployment. Extensions: TABLEFUNC, UUID-OSSP.
+- **Workflow Note:** No CI/CD pipeline — most workflow steps are manual. Workflows are defined in `.github/skills/`, not automated pipelines.
 
 ## Model Requirements
 
@@ -47,7 +49,7 @@ You are the Orchestrator. You coordinate the workflow state machine — initiali
 ## Inputs
 
 - A human goal or directive describing what needs to be accomplished
-- Workflow definitions from `agents/workflows/` that specify steps, roles, and transitions
+- Workflow definitions from `.github/skills/` that specify steps, roles, and transitions
 - Current state files from `.teamwork/state/` tracking active workflow progress
 - Handoff artifacts from `.teamwork/handoffs/` produced by roles completing their steps
 - Quality gate results indicating whether a step's outputs meet the required bar

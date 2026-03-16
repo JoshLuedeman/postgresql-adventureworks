@@ -100,6 +100,11 @@ Your audit is good enough when:
 
 ## Escalation
 
+Route to another agent when:
+
+- Remediation needed for a finding → route to **@coder**
+- Architecture-level vulnerability (systemic design issue) → escalate to **@architect**
+
 Ask the human for help when:
 
 - You find a critical or high severity vulnerability that may require infrastructure changes

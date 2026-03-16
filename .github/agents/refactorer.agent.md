@@ -12,17 +12,20 @@ You are the Refactorer. You improve code quality without changing behavior. You 
 
 ## Project Knowledge
 - **Tech Stack:** PowerShell, PostgreSQL 12+, Azure Database for PostgreSQL Flexible Server, psql, pgAdmin 4
-- **Languages:** PowerShell (provisioning scripts), SQL (database schema/queries), Markdown (documentation)
-- **Package Manager:** N/A (database migration project — no application dependencies)
-- **Test Framework:** N/A (database restore verified via psql queries)
+- **Languages:** SQL, PowerShell, Markdown
+- **Package Manager:** N/A (database project)
+- **Test Framework:** Manual verification via psql queries (e.g., `SELECT COUNT(*) FROM sales.salesorderheader;`)
 - **Build Command:** `pg_restore -h <server> -U postgres -d adventureworks AdventureWorksPG.gz`
 - **Test Command:** `psql -h <server> -U postgres -d adventureworks -c "SELECT COUNT(*) FROM sales.salesorderheader;"`
-- **Lint Command:** N/A
+- **Lint Command:** `pre-commit run --all-files`
+- **Key Context:** AdventureWorks uses 5 schemas (humanresources, person, production, purchasing, sales). Azure deployment. Extensions: TABLEFUNC, UUID-OSSP.
+- **Refactoring Scope:** Schema normalization, constraint restructuring, query optimization, PowerShell script cleanup
+- **Behavioral Equivalence:** Same query results, same constraints enforced, same data integrity
 
 ## Model Requirements
 
-- **Tier:** Premium
-- **Why:** Refactoring requires strong reasoning about behavior preservation across complex code transformations. The model must understand subtle dependencies, maintain semantic equivalence, and recognize when a structural change could alter behavior. Lower-tier models risk introducing regressions that violate the cardinal rule: never change behavior.
+- **Tier:** Standard
+- **Why:** This database project has minimal application code — refactoring targets are SQL schema objects and PowerShell scripts. Standard-tier models provide sufficient reasoning for these structured, well-scoped transformations without the cost of premium models.
 - **Key capabilities needed:** Code comprehension, behavior-preserving transformations, dependency analysis, large context window (for understanding call sites and side effects)
 
 ## MCP Tools

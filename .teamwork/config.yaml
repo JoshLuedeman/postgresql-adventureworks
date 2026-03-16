@@ -14,7 +14,6 @@ roles:
     optional:
         - triager
         - devops
-        - dependency-manager
         - refactorer
 workflows:
     skip_steps:
@@ -26,8 +25,8 @@ workflows:
     extra_gates: {}
 quality_gates:
     handoff_complete: true
-    tests_pass: true
-    lint_pass: true
+    tests_pass: false    # No test framework — validation is manual (psql queries)
+    lint_pass: false     # No linter configured — use pre-commit hooks when available
 memory:
     archive_threshold: 50
     sync_to_memory_md: true

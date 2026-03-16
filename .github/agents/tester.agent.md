@@ -95,6 +95,12 @@ Your testing is good enough when:
 
 ## Escalation
 
+Route to another agent when:
+
+- Defects found during testing → report to **@coder** via issue
+- Design flaws discovered (not just bugs) → escalate to **@architect**
+- Security vulnerabilities found → escalate to **@security-auditor**
+
 Ask the human for help when:
 
 - Acceptance criteria are too vague to derive meaningful test cases

@@ -94,6 +94,12 @@ Your code is good enough when:
 
 ## Escalation
 
+Route to another agent when:
+
+- Design issues or architectural questions → escalate to **@architect**
+- Security concerns in code or configuration → escalate to **@security-auditor**
+- Test strategy questions or validation approach → escalate to **@tester**
+
 Ask the human for help when:
 
 - The task description is ambiguous and you can't determine what "done" means

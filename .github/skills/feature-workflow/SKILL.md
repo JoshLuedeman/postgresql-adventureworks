@@ -1,6 +1,6 @@
 ---
 name: feature-workflow
-description: "End-to-end workflow for delivering a new feature from goal to merged, documented code. Use when the team receives a feature request or high-level goal."
+description: "End-to-end workflow for delivering a new feature from goal to merged, documented changes. Use when the team receives a feature request or high-level goal."
 ---
 
 # Feature Development Workflow
@@ -8,9 +8,13 @@ description: "End-to-end workflow for delivering a new feature from goal to merg
 ## Overview
 
 End-to-end workflow for delivering a new feature from a human-provided goal to merged,
-documented code. Use this workflow when the team receives a feature request, product
+documented changes. Use this workflow when the team receives a feature request, product
 requirement, or high-level goal that requires new functionality. This is the most common
 workflow and serves as the backbone of the development process.
+
+In this database project, a "feature" may include: new schema objects (tables, views,
+functions, indexes), new PowerShell scripts for provisioning or management, new
+documentation, schema enhancements, or additional data population scripts.
 
 ## Trigger
 
@@ -26,12 +30,12 @@ a clear goal statement and any known constraints or requirements.
 | 1 | **Human** | Creates feature request with goal, context, and constraints | Product need or idea | Feature request with goal statement and constraints | Goal is clearly stated; enough context for planning |
 | 2 | **Planner** | Decomposes goal into tasks with acceptance criteria, dependencies, and complexity estimates | Feature request | Task issues, dependency graph, milestone grouping | Every task has acceptance criteria; dependencies form a valid DAG |
 | 3 | **Architect** | Reviews tasks for feasibility, makes design decisions, creates ADR if needed | Task list, dependency graph | Feasibility assessment, design decisions, ADR (if needed) | All tasks validated as feasible; decisions documented |
-| 4 | **Coder** | Implements each task in dependency order, writes tests, opens PR | Validated tasks, design decisions, conventions | PR(s) with code, tests, linked issues, passing CI | Code satisfies acceptance criteria; tests pass |
-| 5 | **Tester** | Reviews coverage, writes edge-case tests, validates against acceptance criteria | PR, acceptance criteria | Additional tests, coverage report, defect reports | Acceptance criteria verified; edge cases covered |
-| 6 | **Security Auditor** | Scans PR for vulnerabilities, secrets, unsafe dependencies | PR diff, dependency manifest | Security findings (severity, location, remediation) | No high/critical findings unresolved |
+| 4 | **Coder** | Implements each task in dependency order, writes validation queries, opens PR | Validated tasks, design decisions, conventions | PR(s) with changes, validation queries, linked issues | Changes satisfy acceptance criteria; schema changes apply cleanly (no SQL errors) |
+| 5 | **Tester** | Reviews validation coverage, writes edge-case validation queries, validates against acceptance criteria | PR, acceptance criteria | Additional validation queries, validation report, defect reports | Acceptance criteria verified; edge cases covered |
+| 6 | **Security Auditor** | Scans PR for vulnerabilities, secrets, unsafe access controls | PR diff, schema changes | Security findings (severity, location, remediation) | No high/critical findings unresolved |
 | 7 | **Reviewer** | Reviews for correctness, quality, standards, test sufficiency | PR, acceptance criteria, security findings | Review decision, review comments | PR approved or actionable change requests given |
-| 8 | **Human** | Approves and merges the PR | Approved PR, review summary | Merged code on target branch | Code merged; CI passes on target branch |
-| 9 | **Documenter** | Updates README, API docs, architecture docs, changelog | Merged PR, task descriptions, ADRs | Updated docs, changelog entry | All docs reflect the new feature |
+| 8 | **Human** | Approves and merges the PR | Approved PR, review summary | Merged changes on target branch | Changes merged; verified via manual review and psql validation queries |
+| 9 | **Documenter** | Updates README, schema docs, architecture docs, changelog | Merged PR, task descriptions, ADRs | Updated docs, changelog entry | All docs reflect the new feature |
 | 10 | **Orchestrator** | Complete workflow: validate all gates passed, update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
 
 ## Handoff Contracts
@@ -53,12 +57,12 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 - ADR file in `.teamwork/docs/decisions/` (if the feature introduces new patterns)
 
 **Coder → Tester**
-- Open PR with implementation and initial tests
-- PR linked to task issues; CI passing
+- Open PR with implementation and initial validation queries
+- PR linked to task issues; changes verified via manual review and psql validation queries
 
 **Tester → Security Auditor**
-- PR branch with complete test suite committed
-- Coverage summary posted as PR comment
+- PR branch with complete validation queries committed
+- Validation summary posted as PR comment
 
 **Security Auditor → Reviewer**
 - Security findings table as PR comment (severity, location, remediation)

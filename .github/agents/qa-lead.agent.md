@@ -12,12 +12,15 @@ You are the QA Lead. You own the overall quality strategy — defining what to t
 
 ## Project Knowledge
 - **Tech Stack:** PowerShell, PostgreSQL 12+, Azure Database for PostgreSQL Flexible Server, psql, pgAdmin 4
-- **Languages:** PowerShell (provisioning scripts), SQL (database schema/queries), Markdown (documentation)
-- **Package Manager:** N/A (database migration project — no application dependencies)
-- **Test Framework:** N/A (database restore verified via psql queries)
+- **Languages:** SQL, PowerShell, Markdown
+- **Package Manager:** N/A (database project)
+- **Test Framework:** Manual verification via psql queries (e.g., `SELECT COUNT(*) FROM sales.salesorderheader;`)
 - **Build Command:** `pg_restore -h <server> -U postgres -d adventureworks AdventureWorksPG.gz`
 - **Test Command:** `psql -h <server> -U postgres -d adventureworks -c "SELECT COUNT(*) FROM sales.salesorderheader;"`
-- **Lint Command:** N/A
+- **Lint Command:** `pre-commit run --all-files`
+- **Key Context:** AdventureWorks uses 5 schemas (humanresources, person, production, purchasing, sales). Azure deployment. Extensions: TABLEFUNC, UUID-OSSP.
+- **Quality Gates:** Schema completeness (all expected tables exist), data integrity (FK/PK constraints valid), restore success (pg_restore exits cleanly), extension functionality (TABLEFUNC and UUID-OSSP work)
+- **Verification:** No formal test framework — quality is validated through psql queries and manual verification
 
 ## Model Requirements
 

@@ -1,17 +1,21 @@
 ---
 name: release-workflow
-description: "Workflow for preparing and publishing a release, including changelog finalization, regression testing, and version bumping. Use when the team is ready to cut a release."
+description: "Workflow for preparing and publishing a release, including changelog finalization, schema validation, and version bumping. Use when the team is ready to cut a release."
 ---
 
 # Release Preparation Workflow
 
 ## Overview
 
-Workflow for preparing and publishing a release — including changelog finalization, regression
-testing, security scanning, version bumping, and release artifact creation. Use this workflow
+Workflow for preparing and publishing a release — including changelog finalization, schema
+validation, security scanning, version bumping, and release artifact creation. Use this workflow
 when the team is ready to cut a release, whether it is a major version, minor version, patch,
 or pre-release. This workflow coordinates multiple roles to ensure the release is complete,
 correct, and well-documented before it reaches users.
+
+For this database project, a "release" consists of: a git tag, a GitHub Release with the
+`AdventureWorksPG.gz` database dump artifact, an updated CHANGELOG.md, and an updated
+README.md reflecting the current state of the schema.
 
 ## Trigger
 
@@ -29,12 +33,12 @@ A human decides the codebase is ready for a new release. This may be driven by:
 | 0 | **Orchestrator** | Initialize workflow: create state file, validate inputs | Trigger event, goal description | `.teamwork/state/<id>.yaml`, metrics log entry | State file created with status `active` |
 | 1 | **Human** | Initiates the release; specifies target version number and included scope | Release decision, version strategy | Release request with version number, scope, target date | Version number follows conventions; scope is defined |
 | 2 | **Planner** | Reviews merged work since last release; compiles list of included changes; identifies gaps | Release request, git log, closed issues | Inclusion list (features, fixes, breaking changes), gap report | All merged work accounted for; gaps identified |
-| 3 | **Tester** | Runs full regression test suite; performs smoke tests on key user flows | Inclusion list, test suite | Regression test results, smoke test report | All tests pass; no regressions detected |
-| 4 | **Security Auditor** | Performs final security scan — dependency audit, vulnerability check, secrets scan | Codebase at release point, dependency manifest | Security scan results, clearance or blockers | No unresolved high/critical vulnerabilities; no leaked secrets |
+| 3 | **Tester** | Runs full schema validation; performs smoke tests via psql on key tables and views | Inclusion list, validation queries | Validation query results, restore verification report | All validation queries pass; no regressions detected |
+| 4 | **Security Auditor** | Performs final security scan — access control review, secrets scan, credential check | Repository at release point | Security scan results, clearance or blockers | No unresolved high/critical vulnerabilities; no leaked secrets or credentials |
 | 5 | **Documenter** | Finalizes changelog, updates version numbers in docs, writes release notes | Inclusion list, previous changelog, version number | Updated changelog, release notes, version-bumped docs | Changelog is complete; release notes are user-facing |
-| 6 | **Coder** | Creates release branch or tag; bumps version numbers in code and config files | Version number, release notes | Release branch/tag, version-bumped source files, PR | Version numbers consistent across all files; branch/tag created |
+| 6 | **Coder** | Creates release tag; regenerates `AdventureWorksPG.gz` dump if schema changed; updates version references | Version number, release notes | Release tag, updated database dump artifact, PR | Version references consistent; tag created; dump artifact is current |
 | 7 | **Reviewer** | Final review — verifies changelog accuracy, version consistency, release readiness | PR, changelog, release notes, test results, security scan | Review decision, release sign-off | All artifacts consistent; no blockers; PR approved |
-| 8 | **Human** | Approves the release; merges PR; publishes release (tag, GitHub Release, package registry) | Approved PR, release notes | Published release, deployment triggered | Release published; artifacts available to users |
+| 8 | **Human** | Approves the release; merges PR; publishes GitHub Release with `AdventureWorksPG.gz` artifact | Approved PR, release notes | Published GitHub Release with tagged dump artifact | Release published; `AdventureWorksPG.gz` available to users |
 | 9 | **Orchestrator** | Complete workflow: validate all gates passed, update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
 
 ## Handoff Contracts
@@ -52,31 +56,31 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 
 **Planner → Tester**
 - Inclusion list with:
-  - Features added (with PR references)
+  - Schema changes added (with PR references)
   - Bugs fixed (with issue references)
   - Breaking changes (with migration notes)
-  - Dependencies updated
+  - PowerShell script updates
   - Gap report: anything planned but not yet merged
 
 **Tester → Security Auditor**
-- Full regression test results (pass/fail summary)
-- Smoke test report covering critical user flows
-- List of any test failures with assessment (known flake vs real issue)
+- Full validation query results (pass/fail summary)
+- Restore verification report (successful `pg_restore` of `AdventureWorksPG.gz`)
+- List of any validation failures with assessment
 
 **Security Auditor → Documenter**
-- Security scan results: dependency audit, vulnerability scan, secrets check
+- Security scan results: access control review, credential check, secrets scan
 - Clearance statement or list of blockers that must be resolved before release
 
 **Documenter → Coder**
 - Finalized changelog with all entries for this release
 - Release notes (user-facing summary of changes)
-- List of files requiring version number updates
+- List of files requiring version reference updates
 
 **Coder → Reviewer**
 - Open PR with:
-  - Version-bumped source files and configuration
+  - Updated version references in README and docs
   - Finalized changelog and release notes committed
-  - Release branch or tag created
+  - Release tag created; `AdventureWorksPG.gz` regenerated if schema changed
 
 **Reviewer → Human**
 - GitHub PR review: approved or changes requested
@@ -85,9 +89,9 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 ## Completion Criteria
 
 - All planned items are accounted for in the changelog (included or explicitly deferred).
-- Full regression test suite passes with no failures.
+- Validation queries confirm expected schema and data integrity; `pg_restore` succeeds cleanly.
 - Security scan shows no unresolved high or critical vulnerabilities.
-- Version numbers are consistent across all source files, configuration, and documentation.
+- Version references are consistent across README, CHANGELOG, and documentation.
 - Changelog and release notes are complete and accurate.
 - Release tag or branch is created and points to the correct commit.
 - Release is published and artifacts are available to users.
@@ -95,8 +99,8 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 ## Notes
 
 - **Pre-release checklist**: Before starting this workflow, verify: all planned PRs are
-  merged, CI is green on the target branch, no release-blocking issues are open, and the
-  team agrees on the version number.
+  merged, schema changes apply cleanly (no SQL errors), no release-blocking issues are open,
+  and the team agrees on the version number.
 - **Version bumping conventions**: Follow the project's versioning scheme (semver
   recommended). Major for breaking changes, minor for new features, patch for bug fixes.
   Pre-release versions (alpha, beta, rc) follow the same workflow with appropriate labels.
@@ -106,8 +110,8 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 - **Release branch strategy**: The Coder creates a release branch (e.g., `release/v2.1.0`)
   or tag depending on the project's branching strategy. The branch should be created from
   the target commit, not from a moving branch head.
-- **DevOps coordination**: If a DevOps agent is active, it handles deployment automation,
-  package publishing, and post-release monitoring.
+- **GitHub Release publishing**: The release is published as a GitHub Release with the
+  `AdventureWorksPG.gz` artifact attached. See `docs/releasing.md` for the detailed process.
 - **Iteration loops**: If the Reviewer finds issues (wrong version, missing changelog entry,
   test failure), control returns to the appropriate role. The Reviewer blocks the release
   until all checklist items are satisfied.

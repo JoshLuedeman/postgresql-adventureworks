@@ -21,10 +21,8 @@ Teamwork is an agent-native development template that structures AI-human collab
    **Extended agents:**
    - `@triager` — Triage and classify incoming issues.
    - `@devops` — CI/CD pipelines, infrastructure, deployments.
-   - `@dependency-manager` — Update and audit third-party dependencies.
    - `@refactorer` — Restructure code without changing behavior.
    - `@lint-agent` — Fix code style and formatting issues.
-   - `@api-agent` — Design and build API endpoints.
    - `@dba-agent` — Database schema, migrations, query optimization.
 
    **If no agent is specified:** Use `docs/role-selector.md` to determine the right one. Quick defaults: implementation → Coder, planning → Planner, code review → Reviewer, multi-role → Planner (break it down first).
@@ -38,7 +36,6 @@ Teamwork is an agent-native development template that structures AI-human collab
    - `/refactor-workflow` — Restructuring existing code
    - `/hotfix-workflow` — Urgent production fixes
    - `/security-response` — Responding to security vulnerabilities
-   - `/dependency-update` — Updating third-party dependencies
    - `/documentation-workflow` — Standalone documentation updates
    - `/spike-workflow` — Research or technical investigation
    - `/release-workflow` — Preparing and publishing releases
@@ -60,9 +57,7 @@ When a user request matches what a custom agent is designed to do, **always disp
 - CI/CD or deployment tasks → dispatch `@devops`
 - Code refactoring → dispatch `@refactorer`
 - Database schema or queries → dispatch `@dba-agent`
-- Dependency updates or audits → dispatch `@dependency-manager`
 - Issue triage → dispatch `@triager`
-- API design or endpoints → dispatch `@api-agent`
 - Code style or formatting fixes → dispatch `@lint-agent`
 
 **Skills** (in `.github/skills/`) are invoked automatically when the request matches a workflow pattern. **Agents** (in `.github/agents/`) should be dispatched with the same automatic behavior via the `task` tool.

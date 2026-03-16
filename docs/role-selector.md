@@ -43,10 +43,6 @@ Does this involve linting, code style, or formatting fixes?
 ├── Yes → @lint-agent
 └── No ↓
 
-Does this involve API design, implementation, or validation?
-├── Yes → @api-agent
-└── No ↓
-
 Does this involve database schemas, migrations, or query optimization?
 ├── Yes → @dba-agent
 └── No ↓
@@ -69,7 +65,6 @@ Is the task too large or ambiguous to fit one agent?
 | "Update the docs" / "Write a README" / "Document this API" | **Documenter** | Documentation |
 | "Start the feature workflow" / "What's the status?" / "What should happen next?" | **Orchestrator** | Workflow coordination |
 | "Fix lint errors" / "Run linters" / "Format this code" | **@lint-agent** | Linting and code style |
-| "Design the API" / "Add an endpoint" / "Validate the API contract" | **@api-agent** | API design and implementation |
 | "Write a migration" / "Optimize this query" / "Design the schema" | **@dba-agent** | Database operations |
 
 ## Context-Based Routing
@@ -116,7 +111,6 @@ Each agent has a recommended model tier based on cognitive complexity. Use the c
 | **Documenter** | Fast | Structured prose, summarization, low reasoning depth |
 | **Orchestrator** | Fast | Rule-following, state management, routing logic |
 | **@lint-agent** | Fast | Rule-based fixes, structured output, low reasoning depth |
-| **@api-agent** | Standard | API design patterns, contract validation, bounded scope |
 | **@dba-agent** | Standard | Schema design, query optimization, structured domain |
 
 **Tier definitions** (configure actual models in `.teamwork/config.yaml`):

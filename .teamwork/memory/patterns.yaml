@@ -1,0 +1,25 @@
+entries:
+  - id: pattern-001
+    date: "2026-03-16"
+    source: "Initial project setup"
+    domain: ["database", "restore"]
+    content: "Always use the postgres user for pg_restore — AdventureWorks schema objects are owned by postgres"
+    context: "The schema dump was created with postgres ownership. Using a different user causes permission errors during restore."
+  - id: pattern-002
+    date: "2026-03-16"
+    source: "Initial project setup"
+    domain: ["database", "azure"]
+    content: "Enable TABLEFUNC and UUID-OSSP extensions BEFORE running pg_restore"
+    context: "The schema depends on these extensions. Restore will fail with errors if they are not enabled in Azure Server Parameters first."
+  - id: pattern-003
+    date: "2026-03-16"
+    source: "Initial project setup"
+    domain: ["database", "restore"]
+    content: "Expect 2 Azure extension errors during restore — they are safe to ignore"
+    context: "Azure-managed PostgreSQL doesn't support all extensions. The restore outputs 2 non-critical errors that don't affect data or schema integrity."
+  - id: pattern-004
+    date: "2026-03-16"
+    source: "Framework review"
+    domain: ["teamwork", "agents"]
+    content: "Customize agent project knowledge per role — generic boilerplate reduces agent effectiveness"
+    context: "All agents initially had identical project knowledge sections. Specializing per role (e.g., giving the tester database validation patterns) significantly improves output quality."

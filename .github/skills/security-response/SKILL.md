@@ -13,13 +13,18 @@ the Planner, reflecting the specialized expertise required for vulnerability ass
 remediation. All work happens on a private branch with no public disclosure until the fix is merged
 and deployed.
 
+In this database project, security vulnerabilities may include: leaked credentials in
+scripts or connection strings, overly permissive database roles or access controls,
+SQL injection in stored procedures or functions, missing encryption for sensitive data,
+or insecure defaults in PostgreSQL configuration scripts.
+
 ## Trigger
 
 A security vulnerability is discovered through one of:
 
 - **External report** — responsible disclosure from a researcher or user
 - **Internal discovery** — Security Auditor or developer finds a vulnerability during review
-- **Automated scanning** — dependency audit, SAST/DAST tool, or CVE database match
+- **Automated scanning** — credential scan, static analysis of SQL/PowerShell scripts, or CVE database match
 - **Incident response** — active exploitation detected in production (combine with Hotfix workflow)
 
 ## Steps
@@ -29,8 +34,8 @@ A security vulnerability is discovered through one of:
 | 0 | **Orchestrator** | Initialize workflow: create state file, validate inputs | Trigger event, goal description | `.teamwork/state/<id>.yaml`, metrics log entry | State file created with status `active` |
 | 1 | **Human / Security Auditor** | Receives vulnerability report; Security Auditor assesses severity (CVSS), scope, and exploitability | Vulnerability report, scan results | Severity assessment, affected components, exploitation analysis | Severity rated; scope bounded; exploitability determined |
 | 2 | **Architect** | Determines remediation approach — fix strategy, affected interfaces, breaking change risk | Severity assessment, codebase context | Remediation plan with approach, scope, and risk analysis | Approach is sound; scope is clear; breaking changes identified |
-| 3 | **Coder** | Implements fix on a private branch; may include dependency updates if the vulnerability is in a dependency | Remediation plan, affected components | PR (private) with fix, regression test, dependency updates if needed | Vulnerability patched; tests pass; no new attack surface |
-| 4 | **Tester** | Validates the fix does not break existing functionality; verifies the vulnerability is no longer exploitable | PR, remediation plan, repro steps | Test results, equivalence confirmation, exploit verification | Functionality intact; vulnerability confirmed closed |
+| 3 | **Coder** | Implements fix on a private branch; may include credential rotation, access control changes, or schema fixes | Remediation plan, affected components | PR (private) with fix, validation query | Vulnerability patched; validation queries confirm expected behavior; no new attack surface |
+| 4 | **Tester** | Validates the fix does not break existing functionality; verifies the vulnerability is no longer exploitable | PR, remediation plan, repro steps | Validation results, equivalence confirmation, exploit verification | Functionality intact; vulnerability confirmed closed |
 | 5 | **Security Auditor** | Verifies remediation is complete — re-runs security scans, confirms no residual exposure | PR, test results, original assessment | Remediation verification, updated severity status, advisory draft | Vulnerability fully remediated; no residual exposure |
 | 6 | **Reviewer** | Reviews fix for correctness, completeness, and absence of new vulnerabilities | PR, remediation verification, advisory draft | Review decision, review comments | Fix is correct and complete; PR approved |
 | 7 | **Human** | Approves and merges the PR; decides disclosure timeline | Approved PR, advisory draft | Merged fix, disclosure decision | Fix merged; disclosure plan established |
@@ -52,7 +57,7 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 - Severity assessment (CVSS score and vector)
 - Affected components and attack surface analysis
 - Exploitability determination (theoretical vs actively exploited)
-- Recommended remediation class (patch, configuration change, dependency update)
+- Recommended remediation class (patch, configuration change, credential rotation, access control fix)
 
 **Architect → Coder**
 - Remediation plan with specific approach and scope
@@ -61,12 +66,12 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 - Coordination note if Dependency Manager involvement is needed
 
 **Coder → Tester**
-- Open PR on private branch with fix and regression test
-- CI passing; dependency updates included if applicable
+- Open PR on private branch with fix and validation query
+- Changes verified via manual review and psql validation queries
 - PR description references the vulnerability (internal tracking ID, not public CVE)
 
 **Tester → Security Auditor**
-- Test results confirming functionality is intact
+- Validation results confirming functionality is intact
 - Explicit verification that the original exploit no longer works
 
 **Security Auditor → Reviewer**
@@ -94,9 +99,9 @@ The orchestrator validates each handoff artifact before dispatching the next rol
 - **Confidentiality is paramount**: All work happens on a private branch. PR titles,
   commit messages, and issue titles must not reveal vulnerability details until disclosure.
   Use internal tracking IDs, not CVE numbers, until the advisory is published.
-- **Dependency Manager coordination**: If the vulnerability is in a third-party dependency,
-  involve the Dependency Manager (if active) at step 3. The Coder and Dependency Manager
-  work together to update the dependency and adapt any affected code.
+- **Extension and tool coordination**: If the vulnerability is in a PostgreSQL extension or
+  provisioning tool, involve the relevant maintainer at step 3. The Coder works to update
+  the extension or tool configuration and adapt any affected scripts.
 - **Disclosure timeline**: The Human decides when to disclose. Standard practice is to
   publish the advisory simultaneously with or shortly after the fix is available. Never
   disclose before the fix is merged and deployable.

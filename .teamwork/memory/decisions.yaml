@@ -1,0 +1,19 @@
+entries:
+  - id: decision-001
+    date: "2026-03-16"
+    source: "Framework review"
+    domain: ["teamwork", "agents"]
+    content: "Removed api-agent and dependency-manager agents — irrelevant to database project"
+    context: "This project has no API endpoints and no application dependencies. Keeping these agents would cause confusion and waste context."
+  - id: decision-002
+    date: "2026-03-16"
+    source: "Framework review"
+    domain: ["teamwork", "config"]
+    content: "Set quality gates tests_pass and lint_pass to false — no test framework or linter infrastructure"
+    context: "The project validates via manual psql queries, not automated tests. Quality gates should match actual capabilities."
+  - id: decision-003
+    date: "2026-03-16"
+    source: "Framework review"
+    domain: ["teamwork", "workflows"]
+    content: "All workflows adapted for database context — replaced CI/CD assumptions with manual verification"
+    context: "Original workflows assumed test suites, build systems, and CI/CD pipelines that don't exist in this database restore project."

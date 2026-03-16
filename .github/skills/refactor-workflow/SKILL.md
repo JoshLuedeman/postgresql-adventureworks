@@ -1,17 +1,22 @@
 ---
 name: refactor-workflow
-description: "Workflow for restructuring existing code without changing behavior. Use when code needs improvement for maintainability, performance, or clarity."
+description: "Workflow for restructuring existing schema and scripts without changing behavior. Use when the database needs improvement for maintainability, performance, or clarity."
 ---
 
 # Refactoring Workflow
 
 ## Overview
 
-Workflow for improving code structure, reducing tech debt, or reorganizing internals without
+Workflow for improving schema structure, reducing tech debt, or reorganizing internals without
 changing external behavior. Use this workflow when the codebase needs structural improvement —
 whether identified by a human, the Reviewer during a PR review, or the Refactorer agent's
 tech debt analysis. The defining constraint of this workflow is behavioral equivalence: the
 system must behave identically before and after the refactoring.
+
+In this database project, refactoring may include: schema normalization, constraint
+restructuring, index optimization, query rewriting, PowerShell script cleanup, or
+reorganizing SQL object definitions. "Behavioral equivalence" for SQL means: same query
+results, same constraints enforced, same data integrity guarantees.
 
 ## Trigger
 
@@ -29,11 +34,11 @@ A refactoring need is identified through one of:
 | 0 | **Orchestrator** | Initialize workflow: create state file, validate inputs | Trigger event, goal description | `.teamwork/state/<id>.yaml`, metrics log entry | State file created with status `active` |
 | 1 | **Human / Reviewer / Refactorer** | Identifies the refactoring need — describes problem, affected areas, desired end state | Code smell, tech debt, friction | Refactoring request with problem, affected files, desired outcome | Problem clearly stated; affected area identified |
 | 2 | **Architect** | Defines scope, approach, and constraints; validates target design is sound | Refactoring request, architecture docs | Approach document: target design, scope, constraints, risks | Approach is sound; scope bounded; no conflict with in-flight work |
-| 3 | **Planner** | Breaks refactoring into safe incremental steps, each independently merge-safe | Approach document, dependencies | Ordered task list with per-step acceptance criteria | Each step has criteria; tests pass after each; no big-bang merge |
-| 4 | **Coder** | Implements each step, updates tests, ensures all tests pass after each step | Task list, approach, conventions | PR(s) per step with all tests passing, linked to tasks | Tests pass; no behavior changes; code follows conventions |
-| 5 | **Tester** | Validates behavior is unchanged, adds tests if coverage is insufficient | PR, acceptance criteria, pre-refactor results | Validation report, additional tests, equivalence confirmation | Pre-existing tests pass; new tests cover undertested paths |
+| 3 | **Planner** | Breaks refactoring into safe incremental steps, each independently merge-safe | Approach document, dependencies | Ordered task list with per-step acceptance criteria | Each step has criteria; validation queries pass after each; no big-bang merge |
+| 4 | **Coder** | Implements each step, updates validation queries, ensures schema applies cleanly after each step | Task list, approach, conventions | PR(s) per step with all validation queries passing, linked to tasks | Validation queries pass; no behavior changes; schema follows conventions |
+| 5 | **Tester** | Validates behavior is unchanged via psql, adds validation queries if coverage is insufficient | PR, acceptance criteria, pre-refactor results | Validation report, additional validation queries, equivalence confirmation | Pre-existing validation queries pass; new queries cover undertested areas |
 | 6 | **Reviewer** | Reviews for correctness, verifies no behavior changed, checks goal is achieved | PR, approach document, test report | Review decision, review comments | Goal achieved; no behavior changes; PR approved |
-| 7 | **Human** | Approves and merges the PR | Approved PR | Merged refactoring on target branch | Code merged; CI passes on target branch |
+| 7 | **Human** | Approves and merges the PR | Approved PR | Merged refactoring on target branch | Changes merged; schema changes apply cleanly (no SQL errors) |
 | 8 | **Orchestrator** | Complete workflow: validate all gates passed, update state | All step outputs, quality gate results | State file with status `completed`, final metrics | All completion criteria verified |
 
 ## Handoff Contracts
@@ -62,44 +67,45 @@ The orchestrator validates each handoff artifact before dispatching the next rol
   - Each step explicitly marked as merge-safe (tests must pass after it)
 
 **Coder → Tester**
-- Open PR with refactored code and updated tests
-- CI passing on the PR branch
+- Open PR with refactored schema/scripts and updated validation queries
+- Changes verified via manual review and psql validation queries
 - PR linked to task issues
 
 **Tester → Reviewer**
 - PR comment with:
-  - Test validation report (all pre-existing tests pass)
-  - Coverage delta (before vs after)
-  - Explicit behavioral equivalence confirmation
+  - Validation report (all pre-existing validation queries pass)
+  - Summary of queries run before and after refactoring
+  - Explicit behavioral equivalence confirmation (same query results, same constraints)
 
 **Reviewer → Human**
 - GitHub PR review: approved or changes requested with specific comments
 
 ## Completion Criteria
 
-- All refactoring steps are implemented, tested, reviewed, and merged.
-- All pre-existing tests pass without modification to their assertions (test structure may
-  change, but expected behavior must not).
+- All refactoring steps are implemented, validated, reviewed, and merged.
+- All pre-existing validation queries return the same results (query structure may
+  change, but expected results must not).
 - The refactoring achieves the goal stated in the original request.
-- No external behavior has changed — inputs produce the same outputs as before.
+- No external behavior has changed — same query results, same constraints enforced, same data integrity.
 
 ## Notes
 
-- **Behavioral equivalence is the hard rule**: If any test's expected output must change,
-  this is not a pure refactoring — it is a behavior change and should go through the
-  Feature or Bug Fix workflow instead. This distinction is non-negotiable.
-- **Incremental steps are mandatory**: Every intermediate commit must leave the codebase in
-  a passing state. "I'll fix the tests in the next step" is not acceptable — each step must
-  be independently valid and merge-safe.
-- **Test-first verification**: Before starting the refactoring, the Tester should confirm
-  existing test coverage is sufficient to detect behavior changes. If coverage is
-  insufficient, add tests first as a separate preliminary step before structural changes.
+- **Behavioral equivalence is the hard rule**: If any validation query's expected results
+  must change, this is not a pure refactoring — it is a behavior change and should go
+  through the Feature or Bug Fix workflow instead. This distinction is non-negotiable.
+- **Incremental steps are mandatory**: Every intermediate commit must leave the schema in
+  a valid state. "I'll fix the validation in the next step" is not acceptable — each step
+  must be independently valid and merge-safe.
+- **Validation-first verification**: Before starting the refactoring, the Tester should
+  confirm existing validation query coverage is sufficient to detect behavior changes. If
+  coverage is insufficient, add validation queries first as a separate preliminary step
+  before structural changes.
 - **Scope discipline**: If the Coder discovers additional refactoring opportunities during
   implementation, file them as separate requests. Do not expand scope mid-workflow — this
   is the most common cause of refactoring failures.
-- **Reviewer focus**: Pay special attention to subtle behavior changes that tests might
-  miss — renamed public APIs, changed default values, reordered operations with side
-  effects, or modified error messages that consumers might depend on.
+- **Reviewer focus**: Pay special attention to subtle behavior changes that validation
+  queries might miss — renamed columns, changed default values, altered constraint
+  behavior, or modified views that downstream queries depend on.
 - **When the Refactorer is active**: The Refactorer agent can initiate this workflow by
   producing a tech debt inventory with prioritized items. Each item enters at step 1 as
   a refactoring request with risk assessment already attached.

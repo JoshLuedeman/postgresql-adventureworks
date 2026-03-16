@@ -1,0 +1,7 @@
+entries:
+  - id: antipattern-001
+    date: "2026-03-16"
+    source: "Framework review"
+    domain: ["teamwork", "setup"]
+    content: "Don't install framework templates without checking project type first"
+    context: "The Teamwork framework was installed with software-development defaults for a database project. This created broken Makefile targets, impossible quality gates, and irrelevant agents."
